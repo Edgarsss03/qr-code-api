@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 
-# 🔹 Vienkāršs UI (HTML iekš Python)
 @app.get("/", response_class=HTMLResponse)
 def home():
     return """
@@ -30,7 +29,6 @@ def home():
     """
 
 
-# 🔹 Apstrādā formu un rāda QR
 @app.post("/generate", response_class=HTMLResponse)
 def generate(link: str = Form(...)):
 
