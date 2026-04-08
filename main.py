@@ -2,55 +2,58 @@ import base64
 import qrcode
 from io import BytesIO
 
-import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-
-
-class QrCodeItemIn(BaseModel):
-    link: str
-
-
-class QrCodeItemOut(BaseModel):
-    link: str | None = None
-    QrCodeBase64String: str | None = None
 
 
 app = FastAPI()
 
-templates = Jinja2Templates(directory="templates")
 
-
+# 🔹 Vienkāršs UI (HTML iekš Python)
 @app.get("/", response_class=HTMLResponse)
-async def homepage(request: Request):
-    context = {"request": request}
-    return templates.TemplateResponse("index.html", context=context)
+def home():
+    return """
+    <html>
+        <head>
+            <title>QR Code Generator</title>
+        </head>
+        <body style="font-family: Arial; text-align: center; margin-top: 50px;">
+            <h2>QR Code Generator</h2>
+
+            <form action="/generate" method="post">
+                <input type="text" name="link" placeholder="Enter link" style="width:300px; padding:8px;" required>
+                <br><br>
+                <button type="submit" style="padding:10px 20px;">Generate</button>
+            </form>
+        </body>
+    </html>
+    """
 
 
-@app.get("/api/")
-async def root():
-    return {"message": "Hello World"}
+# 🔹 Apstrādā formu un rāda QR
+@app.post("/generate", response_class=HTMLResponse)
+def generate(link: str = Form(...)):
 
-
-@app.post("/getqrcode/", response_model=QrCodeItemOut)
-async def generate_qrcode(req: QrCodeItemIn):
-
-    resp = QrCodeItemOut()
-    resp.link = req.link
-
-    img = qrcode.make(req.link)
+    img = qrcode.make(link)
 
     buffered = BytesIO()
     img.save(buffered, format="PNG")
 
-    qr_img_bytes = base64.b64encode(buffered.getvalue()).decode()
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-    resp.QrCodeBase64String = qr_img_bytes
+    return f"""
+    <html>
+        <head>
+            <title>QR Result</title>
+        </head>
+        <body style="font-family: Arial; text-align: center; margin-top: 50px;">
+            <h2>QR Code for:</h2>
+            <p>{link}</p>
 
-    return resp
+            <img src="data:image/png;base64,{qr_base64}" width="250"/>
 
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+            <br><br>
+            <a href="/">Back</a>
+        </body>
+    </html>
+    """
